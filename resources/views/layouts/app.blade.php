@@ -4,61 +4,220 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>@yield('title') - Coffee Shop Senandung Senja</title>
+
+    {{-- Font & Icon --}}
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+
+    {{-- Tailwind --}}
     <script src="https://cdn.tailwindcss.com"></script>
-    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
+
+    <style>
+        body {
+            margin: 0;
+            font-family: "Poppins", sans-serif;
+            background-color: #f8f8f8;
+        }
+
+        /* === SIDEBAR === */
+        .sidebar {
+            height: 100vh;
+            width: 80px;
+            position: fixed;
+            top: 0;
+            left: 0;
+            background: linear-gradient(180deg, #6B3E26 0%, #4E2A18 100%);
+            transition: width 0.3s ease, box-shadow 0.3s ease;
+            overflow-x: hidden;
+            color: #fff;
+            z-index: 100;
+            display: flex;
+            flex-direction: column;
+            box-shadow: 4px 0 10px rgba(0, 0, 0, 0.15);
+        }
+
+        .sidebar.open {
+            width: 240px;
+        }
+
+        .toggle-btn {
+            font-size: 22px;
+            margin: 18px;
+            cursor: pointer;
+            transition: transform 0.3s ease;
+        }
+
+        .toggle-btn:hover {
+            transform: rotate(90deg);
+        }
+
+        .sidebar ul {
+            list-style: none;
+            padding: 0;
+            margin: 10px 0;
+            flex-grow: 1;
+        }
+
+        .sidebar ul li {
+            display: flex;
+            align-items: center;
+            padding: 14px 20px;
+            margin: 5px 0;
+            border-radius: 10px;
+            transition: background-color 0.3s, transform 0.2s ease;
+        }
+
+        .sidebar ul li:hover {
+            background-color: #C47B42;
+            transform: translateX(5px);
+            box-shadow: inset 0 0 5px rgba(255,255,255,0.15);
+        }
+
+        .sidebar ul li i {
+            font-size: 18px;
+            min-width: 30px;
+            text-align: center;
+        }
+
+        .sidebar ul li span {
+            opacity: 0;
+            white-space: nowrap;
+            transition: opacity 0.3s ease, margin-left 0.3s ease;
+        }
+
+        .sidebar.open ul li span {
+            opacity: 1;
+            margin-left: 12px;
+        }
+
+        /* === SUBMENU === */
+        .submenu {
+            max-height: 0;
+            overflow: hidden;
+            transition: max-height 0.4s ease, opacity 0.4s ease;
+            opacity: 0;
+            background-color: #825540;
+            border-left: 3px solid #C47B42;
+        }
+
+        .submenu.open {
+            max-height: 300px;
+            opacity: 1;
+        }
+
+        .submenu a {
+            display: block;
+            padding: 10px 55px;
+            font-size: 14px;
+            text-decoration: none;
+            color: #fff;
+            transition: background-color 0.3s ease;
+        }
+
+        .submenu a:hover {
+            background-color: #C47B42;
+        }
+
+        .arrow {
+            margin-left: auto;
+            transition: transform 0.3s ease;
+        }
+
+        .arrow.rotate {
+            transform: rotate(90deg);
+        }
+
+        /* === KONTEN UTAMA === */
+        .content {
+            margin-left: 80px;
+            padding: 20px;
+            transition: margin-left 0.3s ease;
+        }
+
+        .sidebar.open ~ .content {
+            margin-left: 240px;
+        }
+    </style>
 </head>
-<body class="bg-gray-100">
-    <!-- Header -->
-    <nav class="bg-amber-900 text-white shadow-lg">
-        <div class="max-w-7xl mx-auto px-4">
-            <div class="flex justify-between items-center py-4">
-                <div class="flex items-center space-x-4">
-                    <i class="fas fa-coffee text-2xl"></i>
-                    <h1 class="text-xl font-bold">Coffee Shop Senandung Senja</h1>
-                </div>
-                <div class="flex items-center space-x-4">
-                    @auth
-                    <span>Halo, {{ Auth::user()->name }}</span>
-                    <form method="POST" action="{{ route('logout') }}">
-                        @csrf
-                        <button type="submit" class="bg-amber-700 hover:bg-amber-800 px-4 py-2 rounded">
-                            <i class="fas fa-sign-out-alt mr-2"></i>Logout
-                        </button>
-                    </form>
-                    @endauth
-                </div>
-            </div>
-        </div>
-    </nav>
 
-    <!-- Navigation -->
-    @auth
-    <div class="bg-amber-800 text-white">
-        <div class="max-w-7xl mx-auto px-4">
-            <div class="flex space-x-8 py-3">
-                <a href="{{ url('/dashboard') }}" class="hover:bg-amber-700 px-4 py-2 rounded {{ request()->is('dashboard') ? 'bg-amber-700' : '' }}">
-                    <i class="fas fa-tachometer-alt mr-2"></i>Dashboard
+<body>
+    {{-- Sidebar --}}
+    <div class="sidebar" id="sidebar">
+        <div class="toggle-btn" onclick="toggleSidebar()">☰</div>
+        <ul>
+            <li>
+                <a href="{{ route('dashboard') }}" style="text-decoration:none; color:white; display:flex; align-items:center; width:100%;">
+                    <i class="fas fa-home"></i><span>Dashboard</span>
                 </a>
-                <a href="{{ url('/transactions') }}" class="hover:bg-amber-700 px-4 py-2 rounded {{ request()->is('transactions') ? 'bg-amber-700' : '' }}">
-                    <i class="fas fa-cash-register mr-2"></i>Transaksi
+            </li>
+
+            <li>
+                <a href="{{ route('transactions.index') }}" style="text-decoration:none; color:white; display:flex; align-items:center; width:100%;">
+                    <i class="fas fa-cash-register"></i><span>Transaksi</span>
                 </a>
-                <a href="{{ url('/transactions/history') }}" class="hover:bg-amber-700 px-4 py-2 rounded {{ request()->is('transactions/history') ? 'bg-amber-700' : '' }}">
-                    <i class="fas fa-history mr-2"></i>Riwayat
+            </li>
+
+            <li>
+                <a href="{{ route('transactions.history') }}" style="text-decoration:none; color:white; display:flex; align-items:center; width:100%;">
+                    <i class="fas fa-history"></i><span>Riwayat</span>
                 </a>
-                <a href="{{ url('/reports/daily') }}" class="hover:bg-amber-700 px-4 py-2 rounded {{ request()->is('reports/*') ? 'bg-amber-700' : '' }}">
-                    <i class="fas fa-chart-bar mr-2"></i>Laporan
+            </li>
+
+            <li>
+                <a href="{{ route('reports.daily') }}" style="text-decoration:none; color:white; display:flex; align-items:center; width:100%;">
+                    <i class="fas fa-chart-bar"></i><span>Laporan</span>
                 </a>
-            </div>
-        </div>
+            </li>
+
+            {{-- Data Master --}}
+            <li onclick="toggleSubmenu()" style="cursor:pointer; display:flex; align-items:center; width:100%;">
+                <i class="fas fa-database"></i><span>Data Master</span>
+                <i id="arrowIcon" class="fas fa-chevron-right arrow"></i>
+            </li>
+
+            <ul class="submenu" id="submenu">
+                <li><a href="{{ route('employees.index') }}">Data Karyawan</a></li>
+                <li><a href="{{ route('customers.index') }}">Data Pelanggan</a></li>
+                <li><a href="#">Data Menu</a></li>
+            </ul>
+
+            <li>
+                <a href="#" style="text-decoration:none; color:white; display:flex; align-items:center; width:100%;">
+                    <i class="fas fa-cog"></i><span>Setting</span>
+                </a>
+            </li>
+        </ul>
+
+        {{-- ✅ Tombol Logout --}}
+        <form method="POST" action="{{ route('logout') }}" class="m-4 mt-auto">
+            @csrf
+            <button type="submit"
+                class="w-full flex items-center justify-center gap-3 bg-red-700 hover:bg-red-800 text-white px-4 py-2 rounded-md transition-all duration-300">
+                <i class="fas fa-sign-out-alt"></i>
+                <span>Logout</span>
+            </button>
+        </form>
     </div>
-    @endauth
 
-    <!-- Main Content -->
-    <main class="max-w-7xl mx-auto py-6 px-4">
+    {{-- Konten Halaman --}}
+    <div class="content">
+        <h1 class="text-2xl font-bold text-amber-900 mb-4">@yield('title')</h1>
         @yield('content')
-    </main>
+    </div>
 
-    <!-- Scripts -->
+    {{-- Script --}}
+    <script>
+        function toggleSidebar() {
+            document.getElementById("sidebar").classList.toggle("open");
+        }
+
+        function toggleSubmenu() {
+            const submenu = document.getElementById("submenu");
+            const arrow = document.getElementById("arrowIcon");
+            submenu.classList.toggle("open");
+            arrow.classList.toggle("rotate");
+        }
+    </script>
+
     @stack('scripts')
 </body>
 </html>

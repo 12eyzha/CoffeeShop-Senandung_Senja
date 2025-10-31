@@ -52,11 +52,17 @@
                             {{ $transaction->user->name }}
                         </td>
                         <td class="px-6 py-4 text-sm text-gray-500">
-                            @php
-                                $items = json_decode($transaction->items, true);
-                                $itemCount = count($items);
-                            @endphp
-                            {{ $itemCount }} item(s)
+                           @php
+    $items = is_array($transaction->items)
+        ? $transaction->items
+        : json_decode($transaction->items, true);
+
+    $itemNames = array_map(function($item) {
+        return $item['name'] . ' (x' . $item['quantity'] . ')';
+    }, $items ?? []);
+@endphp
+{{ implode(', ', $itemNames) }}
+
                         </td>
                         <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
                             Rp {{ number_format($transaction->total_amount, 0, ',', '.') }}

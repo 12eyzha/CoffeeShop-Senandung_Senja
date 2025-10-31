@@ -94,23 +94,27 @@
         </thead>
         <tbody>
             @foreach($transactions as $transaction)
-            <tr>
-                <td>{{ $loop->iteration }}</td>
-                <td>{{ $transaction->transaction_code }}</td>
-                <td>{{ $transaction->user->name }}</td>
-                <td>
-                    @php
-                        $items = json_decode($transaction->items, true);
-                        $itemNames = array_map(function($item) {
-                            return $item['name'] . ' (x' . $item['quantity'] . ')';
-                        }, $items);
-                    @endphp
-                    {{ implode(', ', $itemNames) }}
-                </td>
-                <td>Rp {{ number_format($transaction->total_amount, 0, ',', '.') }}</td>
-                <td>{{ strtoupper($transaction->payment_method) }}</td>
-                <td>{{ $transaction->created_at->format('H:i') }}</td>
-            </tr>
+                <tr>
+                    <td>{{ $loop->iteration }}</td>
+                    <td>{{ $transaction->transaction_code }}</td>
+                    <td>{{ $transaction->user->name }}</td>
+                    <td>
+                        @php
+                            // Pastikan items berupa array, bukan string JSON
+                            $items = is_array($transaction->items)
+                                ? $transaction->items
+                                : json_decode($transaction->items, true);
+
+                            $itemNames = array_map(function($item) {
+                                return $item['name'] . ' (x' . $item['quantity'] . ')';
+                            }, $items ?? []);
+                        @endphp
+                        {{ implode(', ', $itemNames) }}
+                    </td>
+                    <td>Rp {{ number_format($transaction->total_amount, 0, ',', '.') }}</td>
+                    <td>{{ strtoupper($transaction->payment_method) }}</td>
+                    <td>{{ $transaction->created_at->format('H:i') }}</td>
+                </tr>
             @endforeach
         </tbody>
     </table>

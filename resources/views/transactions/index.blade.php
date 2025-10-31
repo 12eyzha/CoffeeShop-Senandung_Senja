@@ -11,18 +11,30 @@
             
             <!-- Category Filter -->
             <div class="flex flex-wrap gap-2 mb-4" id="categoryFilter">
-                <button class="category-btn px-4 py-2 rounded-full bg-amber-900 text-white" data-category="all">
-                    Semua
-                </button>
-                <!-- Categories will be loaded here -->
+                <!-- Tombol filter akan dibuat via JS -->
             </div>
 
-            <!-- Menu Grid -->
-            <div class="grid grid-cols-1 md:grid-cols-2 gap-4" id="menuGrid">
-                <div class="text-center py-8">
-                    <i class="fas fa-spinner fa-spin text-amber-600 text-2xl mb-2"></i>
-                    <p class="text-gray-600">Memuat menu...</p>
-                </div>
+            <!-- Menu Table -->
+            <div class="overflow-x-auto">
+                <table class="min-w-full border border-gray-300 text-sm text-gray-700" id="menuGrid">
+                    <thead class="bg-amber-900 text-white">
+                        <tr>
+                            <th class="px-3 py-2 text-left">No</th>
+                            <th class="px-3 py-2 text-left">Nama Menu</th>
+                            <th class="px-3 py-2 text-left">Kategori</th>
+                            <th class="px-3 py-2 text-left">Harga</th>
+                            <th class="px-3 py-2 text-center">Aksi</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        <tr>
+                            <td colspan="5" class="text-center py-4">
+                                <i class="fas fa-spinner fa-spin text-amber-600 text-lg mr-2"></i>
+                                Memuat menu...
+                            </td>
+                        </tr>
+                    </tbody>
+                </table>
             </div>
         </div>
     </div>
@@ -69,13 +81,13 @@ let cart = [];
 let menus = [];
 let categories = [];
 
-// Load data when page loads
+// Load data saat halaman siap
 document.addEventListener('DOMContentLoaded', function() {
     loadMenus();
     loadCategories();
 });
 
-// Load menus from API
+// Load menu dari API
 async function loadMenus() {
     try {
         const response = await fetch('/api/menus');
@@ -83,11 +95,12 @@ async function loadMenus() {
         displayMenus(menus);
     } catch (error) {
         console.error('Error loading menus:', error);
-        document.getElementById('menuGrid').innerHTML = '<p class="text-red-500 text-center py-8">Gagal memuat menu</p>';
+        document.querySelector('#menuGrid tbody').innerHTML = `
+            <tr><td colspan="5" class="text-center text-red-500 py-4">Gagal memuat menu</td></tr>`;
     }
 }
 
-// Load categories from API
+// Load kategori dari API
 async function loadCategories() {
     try {
         const response = await fetch('/api/categories');
@@ -98,83 +111,83 @@ async function loadCategories() {
     }
 }
 
-// Display categories as filter buttons
+// Tampilkan tombol filter
 function displayCategories(categories) {
     const filterContainer = document.getElementById('categoryFilter');
-    
+    filterContainer.innerHTML = '';
+
+    // Tombol Semua
+    const allBtn = document.createElement('button');
+    allBtn.className = 'category-btn px-4 py-2 rounded-full bg-amber-900 text-white';
+    allBtn.textContent = 'Semua';
+    allBtn.setAttribute('data-category', 'all');
+    allBtn.addEventListener('click', filterMenus);
+    filterContainer.appendChild(allBtn);
+
+    // Tombol kategori dari API
     categories.forEach(category => {
         const button = document.createElement('button');
         button.className = 'category-btn px-4 py-2 rounded-full bg-gray-200 text-gray-700 hover:bg-gray-300';
         button.textContent = category.name;
         button.setAttribute('data-category', category.id);
-        
-        button.addEventListener('click', function() {
-            // Update active button
-            document.querySelectorAll('.category-btn').forEach(btn => {
-                btn.classList.remove('bg-amber-900', 'text-white');
-                btn.classList.add('bg-gray-200', 'text-gray-700');
-            });
-            this.classList.remove('bg-gray-200', 'text-gray-700');
-            this.classList.add('bg-amber-900', 'text-white');
-            
-            // Filter menus
-            const categoryId = this.getAttribute('data-category');
-            if (categoryId === 'all') {
-                displayMenus(menus);
-            } else {
-                const filteredMenus = menus.filter(menu => menu.category_id == categoryId);
-                displayMenus(filteredMenus);
-            }
-        });
-        
+        button.addEventListener('click', filterMenus);
         filterContainer.appendChild(button);
     });
 }
 
-// Display menus in grid
+// Fungsi filter menu
+function filterMenus() {
+    document.querySelectorAll('.category-btn').forEach(btn => {
+        btn.classList.remove('bg-amber-900', 'text-white');
+        btn.classList.add('bg-gray-200', 'text-gray-700');
+    });
+    this.classList.remove('bg-gray-200', 'text-gray-700');
+    this.classList.add('bg-amber-900', 'text-white');
+
+    const categoryId = this.getAttribute('data-category');
+    if(categoryId === 'all') {
+        displayMenus(menus);
+    } else {
+        const filteredMenus = menus.filter(menu => menu.category_id == categoryId);
+        displayMenus(filteredMenus);
+    }
+}
+
+// Tampilkan menu di tabel
 function displayMenus(menusToShow) {
-    const menuGrid = document.getElementById('menuGrid');
-    menuGrid.innerHTML = '';
+    const tbody = document.querySelector('#menuGrid tbody');
+    tbody.innerHTML = '';
 
     if (menusToShow.length === 0) {
-        menuGrid.innerHTML = '<p class="text-gray-500 text-center py-8 col-span-2">Tidak ada menu tersedia</p>';
+        tbody.innerHTML = `<tr><td colspan="5" class="text-center py-4 text-gray-500">Tidak ada menu tersedia</td></tr>`;
         return;
     }
 
-    menusToShow.forEach(menu => {
-        const menuCard = document.createElement('div');
-        menuCard.className = 'bg-white border border-gray-200 rounded-lg p-4 hover:shadow-md transition-shadow';
-        menuCard.innerHTML = `
-            <div class="flex justify-between items-start mb-2">
-                <h3 class="font-semibold text-gray-900">${menu.name}</h3>
-                <span class="text-amber-900 font-bold">Rp ${menu.price.toLocaleString()}</span>
-            </div>
-            <p class="text-gray-600 text-sm mb-3">${menu.description || '-'}</p>
-            <button onclick="addToCart(${menu.id})" 
-                    class="w-full bg-amber-900 hover:bg-amber-800 text-white py-2 px-3 rounded-md text-sm font-medium">
-                <i class="fas fa-plus mr-1"></i>Tambah
-            </button>
-        `;
-        menuGrid.appendChild(menuCard);
+    menusToShow.forEach((menu, index) => {
+        tbody.innerHTML += `
+            <tr class="border-b hover:bg-gray-50">
+                <td class="px-3 py-2">${index + 1}</td>
+                <td class="px-3 py-2">${menu.name}</td>
+                <td class="px-3 py-2">${menu.category?.name || '-'}</td>
+                <td class="px-3 py-2">Rp ${menu.price.toLocaleString()}</td>
+                <td class="px-3 py-2 text-center">
+                    <button onclick="addToCart(${menu.id})" 
+                            class="bg-amber-900 hover:bg-amber-800 text-white px-3 py-1 rounded text-sm">
+                        <i class="fas fa-plus mr-1"></i>Tambah
+                    </button>
+                </td>
+            </tr>`;
     });
 }
 
-// Add item to cart
+// Add item ke cart
 function addToCart(menuId) {
     const menu = menus.find(m => m.id === menuId);
     if (!menu) return;
 
     const existingItem = cart.find(item => item.id === menuId);
-    if (existingItem) {
-        existingItem.quantity += 1;
-    } else {
-        cart.push({
-            id: menu.id,
-            name: menu.name,
-            price: menu.price,
-            quantity: 1
-        });
-    }
+    if (existingItem) existingItem.quantity += 1;
+    else cart.push({id: menu.id, name: menu.name, price: menu.price, quantity: 1});
 
     updateCartDisplay();
 }
@@ -225,18 +238,14 @@ function updateCartDisplay() {
     totalAmount.textContent = `Rp ${total.toLocaleString()}`;
 }
 
-// Update item quantity
+// Update quantity
 function updateQuantity(index, change) {
     cart[index].quantity += change;
-    
-    if (cart[index].quantity <= 0) {
-        cart.splice(index, 1);
-    }
-    
+    if (cart[index].quantity <= 0) cart.splice(index, 1);
     updateCartDisplay();
 }
 
-// Remove item from cart
+// Remove from cart
 function removeFromCart(index) {
     cart.splice(index, 1);
     updateCartDisplay();
