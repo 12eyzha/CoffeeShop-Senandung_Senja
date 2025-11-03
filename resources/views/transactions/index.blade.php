@@ -290,5 +290,44 @@ function removeFromCart(i) {
     cart.splice(i, 1);
     updateCartDisplay();
 }
+
+// === PROCESS PAYMENT ===
+document.getElementById('processPayment').addEventListener('click', async function() {
+    if (cart.length === 0) {
+        alert('Keranjang masih kosong!');
+        return;
+    }
+
+    const paymentMethod = document.getElementById('paymentMethod').value;
+    const total = cart.reduce((sum, item) => sum + (item.price * item.quantity), 0);
+
+    try {
+        const response = await fetch('/api/transactions', {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+                'X-CSRF-TOKEN': '{{ csrf_token() }}',
+            },
+            body: JSON.stringify({
+                items: cart,
+                total_amount: total,
+                payment_method: paymentMethod
+            })
+        });
+
+        const result = await response.json();
+
+        if (result.success) {
+            alert(`Transaksi berhasil! Kode: ${result.transaction.transaction_code}`);
+            cart = [];
+            updateCartDisplay();
+        } else {
+            alert('Gagal memproses transaksi: ' + (result.message ?? 'Unknown error'));
+        }
+    } catch (error) {
+        console.error('Error:', error);
+        alert('Terjadi kesalahan pada server saat memproses transaksi.');
+    }
+});
 </script>
 @endpush
