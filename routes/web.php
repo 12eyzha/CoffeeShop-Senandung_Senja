@@ -7,6 +7,7 @@ use App\Http\Controllers\ReportController;
 use App\Http\Controllers\PdfController;
 use App\Http\Controllers\CustomerController;
 use App\Http\Controllers\EmployeeController;
+use App\Http\Controllers\SalesReportController;
 use Illuminate\Support\Facades\Route;
 
 /*
@@ -42,7 +43,7 @@ Route::middleware('auth')->group(function () {
             ->orderBy('created_at', 'desc')
             ->take(5)
             ->get();
-        
+
         return view('dashboard', compact(
             'todayRevenue',
             'todayTransactions',
@@ -67,20 +68,21 @@ Route::middleware('auth')->group(function () {
     | REPORTS
     |--------------------------------------------------------------------------
     */
-    Route::get('/reports/daily', [ReportController::class, 'daily'])->name('reports.daily');
-    Route::get('/reports/weekly', [ReportController::class, 'weekly'])->name('reports.weekly');
+   Route::get('/reports/daily', [ReportController::class, 'daily'])->name('reports.daily');
+Route::get('/reports/weekly', [ReportController::class, 'weekly'])->name('reports.weekly');
+Route::get('/reports/sales', [SalesReportController::class, 'index'])->name('reports.sales');
+
+
+    // (opsional nanti jika laporan penjualan aktif)
+    // Route::get('/reports/sales', [SalesReportController::class, 'index'])->name('reports.sales');
 
     /*
     |--------------------------------------------------------------------------
     | DATA MASTER
     |--------------------------------------------------------------------------
     */
-    // Pelanggan
     Route::resource('customers', CustomerController::class);
-
-    // Karyawan
     Route::resource('employees', EmployeeController::class);
-    // Menu
     Route::resource('menus', MenuController::class);
 
     /*
@@ -92,4 +94,17 @@ Route::middleware('auth')->group(function () {
     Route::get('/api/categories', [MenuController::class, 'getCategoriesApi']);
     Route::get('/api/transactions', [TransactionController::class, 'getTransactionsApi']);
     Route::post('/api/transactions', [TransactionController::class, 'store']);
+
+    // (Optional) API laporan penjualan untuk AJAX
+    Route::get('/api/reports/sales', [SalesReportController::class, 'getSalesApi'])
+        ->name('api.reports.sales');
+});
+
+/*
+|--------------------------------------------------------------------------
+| FALLBACK ROUTE
+|--------------------------------------------------------------------------
+*/
+Route::fallback(function () {
+    return redirect()->route('dashboard')->with('error', 'Halaman tidak ditemukan.');
 });
