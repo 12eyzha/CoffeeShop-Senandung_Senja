@@ -177,7 +177,8 @@
             <ul class="submenu" id="submenu">
                 <li><a href="{{ route('employees.index') }}">Data Karyawan</a></li>
                 <li><a href="{{ route('customers.index') }}">Data Pelanggan</a></li>
-                <li><a href="#">Data Menu</a></li>
+                <li><a href="{{ route('menus.index') }}">Data Menu</a></li>
+
             </ul>
 
             <li>

@@ -8,14 +8,30 @@
     <div class="lg:col-span-2">
         <div class="bg-white rounded-lg shadow p-6">
             <h2 class="text-xl font-semibold text-gray-900 mb-4">Menu Tersedia</h2>
-            
-            <!-- Category Filter -->
-            <div class="flex flex-wrap gap-2 mb-4" id="categoryFilter">
-                <!-- Tombol filter akan dibuat via JS -->
+
+            <!-- Search, Filter & Sort -->
+            <div class="flex flex-wrap gap-2 mb-4 items-center">
+                <input id="searchInput" type="text" placeholder="Cari menu..." 
+                       class="border border-gray-300 rounded px-3 py-2 focus:outline-none focus:ring-amber-600 focus:border-amber-600">
+                
+                <select id="sortSelect" 
+                        class="border border-gray-300 rounded px-3 py-2 text-sm focus:ring-amber-600 focus:border-amber-600">
+                    <option value="">Urutkan</option>
+                    <option value="asc">Harga Termurah</option>
+                    <option value="desc">Harga Termahal</option>
+                    <option value="az">Nama A–Z</option>
+                    <option value="za">Nama Z–A</option>
+                </select>
+
+                <div id="categoryFilter" class="flex flex-wrap gap-2"></div>
             </div>
 
             <!-- Menu Table -->
-            <div class="overflow-x-auto">
+            <div class="overflow-x-auto relative">
+                <div id="menuLoader" class="absolute inset-0 bg-white bg-opacity-70 flex items-center justify-center hidden">
+                    <i class="fas fa-spinner fa-spin text-amber-800 text-2xl"></i>
+                </div>
+
                 <table class="min-w-full border border-gray-300 text-sm text-gray-700" id="menuGrid">
                     <thead class="bg-amber-900 text-white">
                         <tr>
@@ -36,6 +52,8 @@
                     </tbody>
                 </table>
             </div>
+
+            <div id="pagination" class="flex justify-center mt-4 space-x-2"></div>
         </div>
     </div>
 
@@ -44,12 +62,10 @@
         <div class="bg-white rounded-lg shadow p-6 sticky top-4">
             <h2 class="text-xl font-semibold text-gray-900 mb-4">Pesanan Saat Ini</h2>
             
-            <!-- Cart Items -->
             <div class="space-y-3 mb-4 max-h-96 overflow-y-auto" id="cartItems">
                 <p class="text-gray-500 text-center py-8">Belum ada pesanan</p>
             </div>
 
-            <!-- Total & Payment -->
             <div class="border-t pt-4">
                 <div class="flex justify-between items-center mb-4">
                     <span class="text-lg font-semibold">Total:</span>
@@ -80,93 +96,119 @@
 let cart = [];
 let menus = [];
 let categories = [];
+let currentPage = 1;
+let selectedCategory = 'all';
+let searchQuery = '';
+let sortType = '';
 
-// Load data saat halaman siap
 document.addEventListener('DOMContentLoaded', function() {
-    loadMenus();
     loadCategories();
+    loadMenus();
+
+    document.getElementById('searchInput').addEventListener('input', debounce(() => {
+        searchQuery = document.getElementById('searchInput').value;
+        loadMenus(1);
+    }, 400));
+
+    document.getElementById('sortSelect').addEventListener('change', function() {
+        sortType = this.value;
+        loadMenus(1);
+    });
 });
 
-// Load menu dari API
-async function loadMenus() {
+// === MENU ===
+async function loadMenus(page = 1) {
+    const loader = document.getElementById('menuLoader');
+    loader.classList.remove('hidden');
+
     try {
-        const response = await fetch('/api/menus');
-        menus = await response.json();
+        const res = await fetch(`/api/menus?page=${page}&category=${selectedCategory}&search=${searchQuery}`);
+        const data = await res.json();
+        menus = data.data ?? data;
+
+        // sorting client-side
+        if (sortType === 'asc') menus.sort((a, b) => a.price - b.price);
+        if (sortType === 'desc') menus.sort((a, b) => b.price - a.price);
+        if (sortType === 'az') menus.sort((a, b) => a.name.localeCompare(b.name));
+        if (sortType === 'za') menus.sort((a, b) => b.name.localeCompare(a.name));
+
         displayMenus(menus);
-    } catch (error) {
-        console.error('Error loading menus:', error);
-        document.querySelector('#menuGrid tbody').innerHTML = `
-            <tr><td colspan="5" class="text-center text-red-500 py-4">Gagal memuat menu</td></tr>`;
+        if (data.last_page) renderPagination(data);
+    } catch (err) {
+        console.error('Error:', err);
+        document.querySelector('#menuGrid tbody').innerHTML = `<tr><td colspan="5" class="text-center text-red-500 py-4">Gagal memuat menu</td></tr>`;
+    } finally {
+        loader.classList.add('hidden');
     }
 }
 
-// Load kategori dari API
+// === PAGINATION ===
+function renderPagination(data) {
+    const container = document.getElementById('pagination');
+    container.innerHTML = '';
+    if (data.last_page <= 1) return;
+
+    const makeBtn = (label, active, disabled, click) => {
+        const b = document.createElement('button');
+        b.textContent = label;
+        b.className = `px-3 py-1 rounded transition-all ${active ? 'bg-amber-900 text-white' : 'bg-gray-200 hover:bg-gray-300'} ${disabled ? 'opacity-50 cursor-not-allowed' : ''}`;
+        if (!disabled) b.addEventListener('click', click);
+        return b;
+    };
+
+    container.appendChild(makeBtn('‹', false, data.current_page === 1, () => loadMenus(data.current_page - 1)));
+    for (let i = 1; i <= data.last_page; i++) container.appendChild(makeBtn(i, i === data.current_page, false, () => loadMenus(i)));
+    container.appendChild(makeBtn('›', false, data.current_page === data.last_page, () => loadMenus(data.current_page + 1)));
+}
+
+// === CATEGORY FILTER ===
 async function loadCategories() {
-    try {
-        const response = await fetch('/api/categories');
-        categories = await response.json();
-        displayCategories(categories);
-    } catch (error) {
-        console.error('Error loading categories:', error);
-    }
+    const res = await fetch('/api/categories');
+    categories = await res.json();
+    displayCategories(categories);
 }
 
-// Tampilkan tombol filter
 function displayCategories(categories) {
-    const filterContainer = document.getElementById('categoryFilter');
-    filterContainer.innerHTML = '';
-
-    // Tombol Semua
-    const allBtn = document.createElement('button');
-    allBtn.className = 'category-btn px-4 py-2 rounded-full bg-amber-900 text-white';
-    allBtn.textContent = 'Semua';
-    allBtn.setAttribute('data-category', 'all');
-    allBtn.addEventListener('click', filterMenus);
-    filterContainer.appendChild(allBtn);
-
-    // Tombol kategori dari API
-    categories.forEach(category => {
-        const button = document.createElement('button');
-        button.className = 'category-btn px-4 py-2 rounded-full bg-gray-200 text-gray-700 hover:bg-gray-300';
-        button.textContent = category.name;
-        button.setAttribute('data-category', category.id);
-        button.addEventListener('click', filterMenus);
-        filterContainer.appendChild(button);
-    });
+    const container = document.getElementById('categoryFilter');
+    container.innerHTML = '';
+    container.appendChild(createCategoryButton('Semua', 'all', true));
+    categories.forEach(cat => container.appendChild(createCategoryButton(cat.name, cat.id)));
 }
 
-// Fungsi filter menu
-function filterMenus() {
-    document.querySelectorAll('.category-btn').forEach(btn => {
-        btn.classList.remove('bg-amber-900', 'text-white');
-        btn.classList.add('bg-gray-200', 'text-gray-700');
-    });
-    this.classList.remove('bg-gray-200', 'text-gray-700');
-    this.classList.add('bg-amber-900', 'text-white');
+function createCategoryButton(name, id, active = false) {
+    const btn = document.createElement('button');
+    btn.className = `category-btn px-4 py-2 rounded-full transition-all duration-200 
+                     ${active ? 'bg-amber-900 text-white shadow-md scale-105' : 'bg-gray-200 text-gray-700 hover:bg-gray-300'}`;
+    btn.textContent = name;
+    btn.dataset.category = id;
 
-    const categoryId = this.getAttribute('data-category');
-    if(categoryId === 'all') {
-        displayMenus(menus);
-    } else {
-        const filteredMenus = menus.filter(menu => menu.category_id == categoryId);
-        displayMenus(filteredMenus);
-    }
+    btn.addEventListener('click', function() {
+        document.querySelectorAll('.category-btn').forEach(b => {
+            b.classList.remove('bg-amber-900', 'text-white', 'shadow-md', 'scale-105');
+            b.classList.add('bg-gray-200', 'text-gray-700');
+        });
+        this.classList.add('bg-amber-900', 'text-white', 'shadow-md', 'scale-105');
+        this.classList.remove('bg-gray-200', 'text-gray-700');
+        selectedCategory = id;
+        loadMenus(1);
+    });
+
+    return btn;
 }
 
-// Tampilkan menu di tabel
+// === DISPLAY MENU ===
 function displayMenus(menusToShow) {
     const tbody = document.querySelector('#menuGrid tbody');
     tbody.innerHTML = '';
-
-    if (menusToShow.length === 0) {
+    if (!menusToShow.length) {
         tbody.innerHTML = `<tr><td colspan="5" class="text-center py-4 text-gray-500">Tidak ada menu tersedia</td></tr>`;
         return;
     }
 
-    menusToShow.forEach((menu, index) => {
+    menusToShow.forEach((menu, i) => {
         tbody.innerHTML += `
-            <tr class="border-b hover:bg-gray-50">
-                <td class="px-3 py-2">${index + 1}</td>
+            <tr class="border-b hover:bg-gray-50 transition-all">
+                <td class="px-3 py-2">${i + 1}</td>
                 <td class="px-3 py-2">${menu.name}</td>
                 <td class="px-3 py-2">${menu.category?.name || '-'}</td>
                 <td class="px-3 py-2">Rp ${menu.price.toLocaleString()}</td>
@@ -180,24 +222,28 @@ function displayMenus(menusToShow) {
     });
 }
 
-// Add item ke cart
+// === CART ===
+function debounce(func, delay) {
+    let timeout;
+    return function(...args) {
+        clearTimeout(timeout);
+        timeout = setTimeout(() => func.apply(this, args), delay);
+    };
+}
+
 function addToCart(menuId) {
     const menu = menus.find(m => m.id === menuId);
     if (!menu) return;
-
-    const existingItem = cart.find(item => item.id === menuId);
-    if (existingItem) existingItem.quantity += 1;
+    const existing = cart.find(item => item.id === menuId);
+    if (existing) existing.quantity++;
     else cart.push({id: menu.id, name: menu.name, price: menu.price, quantity: 1});
-
     updateCartDisplay();
 }
 
-// Update cart display
 function updateCartDisplay() {
     const cartItems = document.getElementById('cartItems');
     const totalAmount = document.getElementById('totalAmount');
     const processBtn = document.getElementById('processPayment');
-
     cartItems.innerHTML = '';
     let total = 0;
 
@@ -208,7 +254,6 @@ function updateCartDisplay() {
         cart.forEach((item, index) => {
             const itemTotal = item.price * item.quantity;
             total += itemTotal;
-
             const cartItem = document.createElement('div');
             cartItem.className = 'flex justify-between items-center bg-gray-50 p-3 rounded-lg';
             cartItem.innerHTML = `
@@ -227,64 +272,23 @@ function updateCartDisplay() {
                 </div>
                 <button onclick="removeFromCart(${index})" class="text-red-500 hover:text-red-700 ml-2">
                     <i class="fas fa-trash"></i>
-                </button>
-            `;
+                </button>`;
             cartItems.appendChild(cartItem);
         });
-
         processBtn.disabled = false;
     }
-
     totalAmount.textContent = `Rp ${total.toLocaleString()}`;
 }
 
-// Update quantity
-function updateQuantity(index, change) {
-    cart[index].quantity += change;
-    if (cart[index].quantity <= 0) cart.splice(index, 1);
+function updateQuantity(i, change) {
+    cart[i].quantity += change;
+    if (cart[i].quantity <= 0) cart.splice(i, 1);
     updateCartDisplay();
 }
 
-// Remove from cart
-function removeFromCart(index) {
-    cart.splice(index, 1);
+function removeFromCart(i) {
+    cart.splice(i, 1);
     updateCartDisplay();
 }
-
-// Process payment
-document.getElementById('processPayment').addEventListener('click', async function() {
-    if (cart.length === 0) return;
-
-    const paymentMethod = document.getElementById('paymentMethod').value;
-    const total = cart.reduce((sum, item) => sum + (item.price * item.quantity), 0);
-
-    try {
-        const response = await fetch('/api/transactions', {
-            method: 'POST',
-            headers: {
-                'Content-Type': 'application/json',
-                'X-CSRF-TOKEN': '{{ csrf_token() }}'
-            },
-            body: JSON.stringify({
-                items: cart,
-                total_amount: total,
-                payment_method: paymentMethod
-            })
-        });
-
-        const result = await response.json();
-
-        if (result.success) {
-            alert('Transaksi berhasil! Kode: ' + result.transaction.transaction_code);
-            cart = [];
-            updateCartDisplay();
-        } else {
-            alert('Error: ' + result.message);
-        }
-    } catch (error) {
-        console.error('Error:', error);
-        alert('Terjadi kesalahan saat memproses transaksi');
-    }
-});
 </script>
 @endpush

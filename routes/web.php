@@ -80,6 +80,8 @@ Route::middleware('auth')->group(function () {
 
     // Karyawan
     Route::resource('employees', EmployeeController::class);
+    // Menu
+    Route::resource('menus', MenuController::class);
 
     /*
     |--------------------------------------------------------------------------
