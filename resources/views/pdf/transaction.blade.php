@@ -90,7 +90,8 @@
         </thead>
         <tbody>
             @php
-                $items = json_decode($transaction->items, true);
+                // Tidak perlu json_decode karena sudah dicast di model
+                $items = $transaction->items;
                 $counter = 1;
             @endphp
             @foreach($items as $item)
