@@ -7,7 +7,7 @@ use App\Http\Controllers\ReportController;
 use App\Http\Controllers\PdfController;
 use App\Http\Controllers\CustomerController;
 use App\Http\Controllers\EmployeeController;
-use App\Http\Controllers\SalesReportController;
+use App\Http\Controllers\ExportController; // ✅ sekarang semua laporan & export di sini
 use Illuminate\Support\Facades\Route;
 
 /*
@@ -68,13 +68,22 @@ Route::middleware('auth')->group(function () {
     | REPORTS
     |--------------------------------------------------------------------------
     */
-   Route::get('/reports/daily', [ReportController::class, 'daily'])->name('reports.daily');
+    Route::get('/reports/daily', [ReportController::class, 'daily'])->name('reports.daily');
+    Route::get('/reports/weekly', [ReportController::class, 'weekly'])->name('reports.weekly');
+    Route::get('/reports/sales', [ExportController::class, 'index'])->name('reports.sales'); // ✅ diarahkan ke ExportController
+
+    // ✅ Export Excel
+    Route::get('/reports/daily', [ReportController::class, 'daily'])->name('reports.daily');
 Route::get('/reports/weekly', [ReportController::class, 'weekly'])->name('reports.weekly');
-Route::get('/reports/sales', [SalesReportController::class, 'index'])->name('reports.sales');
 
+// ✅ Export Excel Harian & Mingguan
+Route::get('/reports/export/daily', [ReportController::class, 'exportDailyExcel'])
+    ->name('reports.export.daily');
 
-    // (opsional nanti jika laporan penjualan aktif)
-    // Route::get('/reports/sales', [SalesReportController::class, 'index'])->name('reports.sales');
+// ✅ Tambahkan parameter opsional start_date & end_date
+Route::get('/reports/export/excel/{start_date?}/{end_date?}', [ExportController::class, 'exportExcel'])
+    ->name('reports.export.excel');
+
 
     /*
     |--------------------------------------------------------------------------
@@ -96,7 +105,7 @@ Route::get('/reports/sales', [SalesReportController::class, 'index'])->name('rep
     Route::post('/api/transactions', [TransactionController::class, 'store']);
 
     // (Optional) API laporan penjualan untuk AJAX
-    Route::get('/api/reports/sales', [SalesReportController::class, 'getSalesApi'])
+    Route::get('/api/reports/sales', [ExportController::class, 'getSalesApi'])
         ->name('api.reports.sales');
 });
 

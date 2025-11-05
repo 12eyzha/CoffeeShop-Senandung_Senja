@@ -3,64 +3,133 @@
 namespace App\Http\Controllers;
 
 use App\Models\Transaction;
-use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
+use App\Exports\ReportExport;
+use Maatwebsite\Excel\Facades\Excel;
+use Carbon\Carbon;
 
 class ReportController extends Controller
 {
-    /**
-     * 🔹 Laporan Harian
-     */
+    /** 🔹 Laporan Harian */
     public function daily()
     {
-        $today = now()->format('Y-m-d');
+        $today = now()->toDateString();
 
-        // Ambil transaksi hari ini beserta kasir (user)
-        $transactions = Transaction::with('user')
-            ->whereDate('created_at', $today)
+        $transactions = Transaction::whereDate('created_at', $today)
             ->orderBy('created_at', 'desc')
             ->get();
 
-        // Ringkasan
-        $totalRevenue = $transactions->sum('total_amount');
-        $totalTransactions = $transactions->count();
-        $totalItemsSold = $transactions->sum(fn($trx) => collect($trx->items)->sum('quantity'));
+        $summary = $this->getSummary($transactions);
+        $products = $this->getProductSales($transactions);
 
         return view('reports.daily', compact(
             'transactions',
-            'totalRevenue',
-            'totalTransactions',
-            'totalItemsSold',
+            'summary',
+            'products',
             'today'
         ));
     }
 
-    /**
-     * 🔹 Laporan Mingguan
-     */
+    /** 🔹 Laporan Mingguan */
     public function weekly()
     {
-        $startOfWeek = now()->startOfWeek();
-        $endOfWeek = now()->endOfWeek();
+        // Tentukan rentang minggu ini
+        $startOfWeek = Carbon::now()->startOfWeek();
+        $endOfWeek   = Carbon::now()->endOfWeek();
 
-        // Ambil transaksi selama minggu ini
+        // Ambil transaksi minggu ini
         $transactions = Transaction::with('user')
-            ->whereBetween(DB::raw('DATE(created_at)'), [$startOfWeek, $endOfWeek])
-            ->orderBy('created_at', 'desc')
+            ->whereBetween('created_at', [$startOfWeek, $endOfWeek])
+            ->orderBy('created_at', 'asc')
             ->get();
 
-        // Ringkasan
-        $totalRevenue = $transactions->sum('total_amount');
+        // Hitung ringkasan
         $totalTransactions = $transactions->count();
-        $totalItemsSold = $transactions->sum(fn($trx) => collect($trx->items)->sum('quantity'));
+        $totalRevenue      = $transactions->sum('total_amount');
+        $totalItemsSold    = $transactions->sum('total_items');
 
+        // Kirim ke view
         return view('reports.weekly', compact(
-            'transactions',
-            'totalRevenue',
-            'totalTransactions',
-            'totalItemsSold',
             'startOfWeek',
-            'endOfWeek'
+            'endOfWeek',
+            'transactions',
+            'totalTransactions',
+            'totalRevenue',
+            'totalItemsSold'
         ));
+    
+}
+
+
+    /** 🔹 Export Excel Harian */
+    public function exportDailyExcel()
+    {
+        $today = now()->toDateString();
+
+        $transactions = Transaction::whereDate('created_at', $today)->get();
+        $summary = $this->getSummary($transactions);
+        $products = $this->getProductSales($transactions);
+
+        return Excel::download(
+            new ReportExport($transactions, $summary, $products),
+            'laporan-harian-' . now()->format('d-m-Y') . '.xlsx'
+        );
+    }
+
+    /** 🔹 Export Excel Mingguan */
+    public function exportWeeklyExcel()
+    {
+        $start = now()->startOfWeek()->toDateString();
+        $end = now()->endOfWeek()->toDateString();
+
+        $transactions = Transaction::whereBetween(DB::raw('DATE(created_at)'), [$start, $end])->get();
+        $summary = $this->getSummary($transactions);
+        $products = $this->getProductSales($transactions);
+
+        return Excel::download(
+            new ReportExport($transactions, $summary, $products),
+            'laporan-mingguan-' . now()->format('d-m-Y') . '.xlsx'
+        );
+    }
+
+    /** 🧩 Ringkasan Statistik */
+    private function getSummary($transactions)
+    {
+        return [
+            'total_transactions' => $transactions->count(),
+            'total_income' => $transactions->sum('total_amount'),
+            'total_items_sold' => $transactions->sum(fn($trx) =>
+                collect($trx->items ?? [])->sum('quantity')
+            ),
+        ];
+    }
+
+    /** 🧩 Produk Terjual */
+    private function getProductSales($transactions)
+    {
+        $sales = [];
+
+        foreach ($transactions as $trx) {
+            foreach ($trx->items ?? [] as $item) {
+                $name = $item['name'] ?? '-';
+                $category = $item['category'] ?? '-';
+                $qty = $item['quantity'] ?? 0;
+                $price = $item['price'] ?? 0;
+
+                if (!isset($sales[$name])) {
+                    $sales[$name] = [
+                        'name' => $name,
+                        'category' => $category,
+                        'quantity' => 0,
+                        'total' => 0,
+                    ];
+                }
+
+                $sales[$name]['quantity'] += $qty;
+                $sales[$name]['total'] += $qty * $price;
+            }
+        }
+
+        return array_values($sales);
     }
 }

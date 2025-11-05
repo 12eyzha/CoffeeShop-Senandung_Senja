@@ -7,7 +7,18 @@
         Laporan Mingguan ({{ $startOfWeek->format('d M') }} - {{ $endOfWeek->format('d M Y') }})
     </h1>
 
-    <!-- 🔹 Ringkasan -->
+    {{-- 🔹 Tombol Export Excel --}}
+    <div class="flex justify-end mb-4">
+        <a href="{{ route('reports.export.excel', [
+            'start_date' => $startOfWeek->toDateString(),
+            'end_date' => $endOfWeek->toDateString(),
+        ]) }}"
+           class="bg-green-700 text-white px-4 py-2 rounded hover:bg-green-800 transition text-sm">
+           <i class="fas fa-file-excel mr-2"></i>Export Excel
+        </a>
+    </div>
+
+    {{-- 🔹 Ringkasan --}}
     <div class="grid grid-cols-1 md:grid-cols-3 gap-4 mb-6">
         <div class="bg-amber-50 border-l-4 border-amber-800 p-4 rounded">
             <p class="text-sm text-gray-600">Total Transaksi</p>
@@ -15,7 +26,9 @@
         </div>
         <div class="bg-amber-50 border-l-4 border-amber-800 p-4 rounded">
             <p class="text-sm text-gray-600">Total Pendapatan</p>
-            <p class="text-2xl font-bold text-amber-900">Rp {{ number_format($totalRevenue, 0, ',', '.') }}</p>
+            <p class="text-2xl font-bold text-amber-900">
+                Rp {{ number_format($totalRevenue, 0, ',', '.') }}
+            </p>
         </div>
         <div class="bg-amber-50 border-l-4 border-amber-800 p-4 rounded">
             <p class="text-sm text-gray-600">Total Item Terjual</p>
@@ -23,7 +36,7 @@
         </div>
     </div>
 
-    <!-- 🔹 Tabel Transaksi -->
+    {{-- 🔹 Tabel Transaksi --}}
     <div class="overflow-x-auto mb-8">
         <table class="min-w-full border border-gray-300 text-sm text-gray-700">
             <thead class="bg-amber-900 text-white">
@@ -38,10 +51,14 @@
             <tbody>
                 @forelse($transactions as $trx)
                 <tr class="border-b hover:bg-gray-50">
-                    <td class="px-3 py-2">{{ $trx->transaction_code ?? 'TRX-' . str_pad($trx->id, 4, '0', STR_PAD_LEFT) }}</td>
+                    <td class="px-3 py-2">
+                        {{ $trx->transaction_code ?? 'TRX-' . str_pad($trx->id, 4, '0', STR_PAD_LEFT) }}
+                    </td>
                     <td class="px-3 py-2">{{ $trx->created_at->format('d/m/Y H:i') }}</td>
                     <td class="px-3 py-2">{{ $trx->user->name ?? '-' }}</td>
-                    <td class="px-3 py-2 text-right">Rp {{ number_format($trx->total_amount, 0, ',', '.') }}</td>
+                    <td class="px-3 py-2 text-right">
+                        Rp {{ number_format($trx->total_amount, 0, ',', '.') }}
+                    </td>
                     <td class="px-3 py-2 text-center">
                         <span class="px-2 py-1 rounded text-white 
                             {{ $trx->payment_method === 'cash' ? 'bg-green-600' : 'bg-blue-600' }}">
@@ -51,14 +68,16 @@
                 </tr>
                 @empty
                 <tr>
-                    <td colspan="5" class="text-center py-4 text-gray-500">Tidak ada transaksi dalam minggu ini</td>
+                    <td colspan="5" class="text-center py-4 text-gray-500">
+                        Tidak ada transaksi dalam minggu ini
+                    </td>
                 </tr>
                 @endforelse
             </tbody>
         </table>
     </div>
 
-    <!-- 🔹 Grafik Pendapatan Mingguan -->
+    {{-- 🔹 Grafik Pendapatan Mingguan --}}
     <div class="bg-white rounded-lg shadow p-4">
         <h2 class="text-lg font-semibold text-amber-900 mb-3">Grafik Pendapatan Mingguan</h2>
         <canvas id="weeklyChart" height="100"></canvas>
@@ -70,6 +89,7 @@
 <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
 <script>
 const ctxWeekly = document.getElementById('weeklyChart');
+
 new Chart(ctxWeekly, {
     type: 'line',
     data: {

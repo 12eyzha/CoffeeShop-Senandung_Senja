@@ -6,6 +6,17 @@
 <div class="bg-white rounded-lg shadow p-6">
     <h1 class="text-2xl font-bold text-amber-900 mb-6">Laporan Penjualan</h1>
 
+    {{-- 🔹 Tombol Export Excel --}}
+    <div class="flex justify-end mb-4">
+        <a href="{{ route('reports.export.excel', [
+            'start_date' => $startDate,
+            'end_date' => $endDate
+        ]) }}"
+           class="bg-green-700 text-white px-4 py-2 rounded hover:bg-green-800 transition text-sm">
+           <i class="fas fa-file-excel mr-2"></i>Export Excel
+        </a>
+    </div>
+
     <!-- 🔹 Filter Tanggal -->
     <form method="GET" class="flex flex-wrap items-end gap-4 mb-6">
         <div>

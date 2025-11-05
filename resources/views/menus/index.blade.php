@@ -21,12 +21,14 @@
         </button>
     </form>
 
+    {{-- ✅ Notifikasi Sukses --}}
     @if(session('success'))
         <div class="mb-4 bg-green-100 text-green-700 px-4 py-2 rounded">
             <i class="fas fa-check-circle mr-2"></i>{{ session('success') }}
         </div>
     @endif
 
+    {{-- 📋 Tabel Data --}}
     <div class="bg-white rounded-lg shadow overflow-hidden">
         <table class="min-w-full border border-gray-200">
             <thead class="bg-amber-900 text-white">
@@ -40,8 +42,8 @@
                 </tr>
             </thead>
             <tbody>
-                @foreach($menus as $menu)
-                <tr class="border-t hover:bg-gray-50">
+                @forelse($menus as $menu)
+                <tr class="border-t hover:bg-amber-50 transition">
                     <td class="px-4 py-2">{{ $menu->name }}</td>
                     <td class="px-4 py-2">{{ $menu->category->name ?? '-' }}</td>
                     <td class="px-4 py-2">Rp{{ number_format($menu->price, 0, ',', '.') }}</td>
@@ -52,11 +54,11 @@
                         </span>
                     </td>
                     <td class="px-4 py-2 text-center">
-                        <a href="{{ route('menus.edit', $menu) }}" 
+                        <a href="{{ route('menus.edit', $menu->id) }}" 
                            class="text-blue-600 hover:text-blue-800 mr-2">
                             <i class="fas fa-edit"></i>
                         </a>
-                        <form action="{{ route('menus.destroy', $menu) }}" method="POST" class="inline">
+                        <form action="{{ route('menus.destroy', $menu->id) }}" method="POST" class="inline">
                             @csrf
                             @method('DELETE')
                             <button type="submit" onclick="return confirm('Hapus menu ini?')" 
@@ -66,12 +68,18 @@
                         </form>
                     </td>
                 </tr>
-                @endforeach
+                @empty
+                <tr>
+                    <td colspan="6" class="text-center text-gray-500 py-4">
+                        <i class="fas fa-info-circle mr-1"></i> Belum ada data menu.
+                    </td>
+                </tr>
+                @endforelse
             </tbody>
         </table>
 
         <div class="p-4">
-            {{ $menus->links() }}
+            {{ $menus->onEachSide(1)->links() }}
         </div>
     </div>
 </div>
