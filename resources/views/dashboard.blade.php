@@ -7,8 +7,22 @@
 
     <!-- Header Dashboard -->
     <div class="flex justify-between items-center mb-6">
-        <h1 class="text-3xl font-bold text-amber-900">Dashboard</h1>
-        <span class="text-gray-600">Selamat datang, {{ Auth::user()->name }}</span>
+        <div>
+            <h1 class="text-3xl font-bold text-amber-900">Dashboard</h1>
+        </div>
+        <div class="flex items-center space-x-4">
+            <span class="text-gray-600">Selamat datang, <strong>{{ Auth::user()->name }}</strong></span>
+
+            <!-- Tombol Logout -->
+            <form method="POST" action="{{ route('logout') }}">
+                @csrf
+                <button type="submit"
+                    class="flex items-center gap-2 bg-red-600 hover:bg-red-700 text-white px-4 py-2 rounded-md shadow transition-all duration-300">
+                    <i class="fas fa-sign-out-alt"></i>
+                    <span>Logout</span>
+                </button>
+            </form>
+        </div>
     </div>
 
     <!-- Stats Grid -->
